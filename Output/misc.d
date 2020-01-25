@@ -1,0 +1,9 @@
+..\..\output\misc.o: ..\..\Libraries\Driver\src\misc.c
+..\..\output\misc.o: ..\..\Libraries\Driver\inc\misc.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\stm32f4xx.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\core_cm4.h
+..\..\output\misc.o: E:\Develop\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\core_cmInstr.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\core_cmFunc.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\core_cmSimd.h
+..\..\output\misc.o: ..\..\Libraries\CMSIS\ins\system_stm32f4xx.h
