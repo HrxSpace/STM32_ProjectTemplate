@@ -1,8 +1,8 @@
-;******************** (C) COPYRIGHT 2016 STMicroelectronics ********************
+;******************** (C) COPYRIGHT 2015 STMicroelectronics ********************
 ;* File Name          : startup_stm32f429_439xx.s
 ;* Author             : MCD Application Team
-;* @version           : V1.8.0
-;* @date              : 09-November-2016
+;* @version           : V1.5.0
+;* @date              : 06-March-2015
 ;* Description        : STM32F429xx/439xx devices vector table for MDK-ARM toolchain. 
 ;*                      This module performs:
 ;*                      - Set the initial SP
@@ -38,6 +38,14 @@
 ;   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
 
+;开辟栈的大小为 0X00000400（ 1KB），名字为 STACK， NOINIT 即不初始化，可读可写， 8（ 2^3）字节对齐。
+;栈的作用是用于局部变量，函数调用，函数形参等的开销，栈的大小不能超过内部SRAM 的大小。如果编写的程序比较大，定义的局部变量很多，那么就需要修改栈的大小。
+;如果某一天，你写的程序出现了莫名奇怪的错误，并进入了硬 fault 的时候，这时你就要考虑下是不是栈不够大，溢出了。
+;EQU：宏定义的伪指令，相当于等于，类似与 C 中的 define。
+;AREA：告诉汇编器汇编一个新的代码段或者数据段。 STACK 表示段名，这个可以任意命名； NOINIT 表示不初始化； READWRITE 表示可读可写， ALIGN=3，表示按照 2^3对齐，即 8 字节对齐。
+;SPACE：用于分配一定大小的内存空间，单位为字节。这里指定大小等于 Stack_Size。
+;标号__initial_sp 紧挨着 SPACE 语句放置，表示栈的结束地址，即栈顶地址，栈是由高向低生长的。
+;ALIGN：对指令或者数据存放的地址进行对齐，后面会跟一个立即数。缺省表示 4 字节对齐。
 Stack_Size      EQU     0x00000400
 
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
@@ -49,6 +57,9 @@ __initial_sp
 ;   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
 ; </h>
 
+;开辟堆的大小为 0X00000200（ 512 字节），名字为 HEAP， NOINIT 即不初始化，可读可写， 8（ 2^3）字节对齐。
+;__heap_base 表示对的起始地址，__heap_limit 表示堆的结束地址。堆是由低向高生长的，跟栈的生长方向相反。
+
 Heap_Size       EQU     0x00000200
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
@@ -59,13 +70,14 @@ __heap_limit
                 PRESERVE8
                 THUMB
 
-
+;定义一个数据段，名字为 RESET，可读。并声明 __Vectors、 __Vectors_End 和__Vectors_Size 这三个标号具有全局属性，可供外部的文件调用。
 ; Vector Table Mapped to Address 0 at Reset
                 AREA    RESET, DATA, READONLY
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
 
+;Vectors 为向量表起始地址， __Vectors_End 为向量表结束地址，两个相减即可算出向量表大小。
 __Vectors       DCD     __initial_sp               ; Top of Stack
                 DCD     Reset_Handler              ; Reset Handler
                 DCD     NMI_Handler                ; NMI Handler
@@ -180,9 +192,11 @@ __Vectors_End
 
 __Vectors_Size  EQU  __Vectors_End - __Vectors
 
-                AREA    |.text|, CODE, READONLY
+                AREA    |.text|, CODE, READONLY			;定义一个名称为.text 的代码段，可读。
 
 ; Reset handler
+;WEAK：表示弱定义，如果外部文件优先定义了该标号则首先引用该标号，如果外部文件没有声明也不会出错。这里表示复位子程序可以由用户在其他文件重新实现，这里并不是唯一的。
+;IMPORT：表示该标号来自外部文件，跟 C 语言中的 EXTERN 关键字类似。这里表示 SystemInit 和__main 这两个函数均来自外部的文件。
 Reset_Handler    PROC
                  EXPORT  Reset_Handler             [WEAK]
         IMPORT  SystemInit
@@ -195,7 +209,7 @@ Reset_Handler    PROC
                  ENDP
 
 ; Dummy Exception Handlers (infinite loops which can be modified)
-
+;B       . 表示跳转到标号. 表示无限循环
 NMI_Handler     PROC
                 EXPORT  NMI_Handler                [WEAK]
                 B       .
@@ -426,11 +440,15 @@ DMA2D_IRQHandler
                 B       .
 
                 ENDP
-
+;ALIGN：对指令或者数据存放的地址进行对齐，后面会跟一个立即数。缺省表示 4 字节对齐。
                 ALIGN
 
 ;*******************************************************************************
 ; User Stack and Heap initialization
+;判断是否定义了__MICROLIB ，如果定义了则赋予标号__initial_sp（栈顶地址）、__heap_base（堆起始地址）、 __heap_limit（堆结束地址）全局属性，可供外部文件调用。
+;如果没有定义（实际的情况就是我们没定义__MICROLIB）则使用默认的 C 库，然后初始化用户堆栈大小，这部分有 C 库函数__main 来完成，当初始化完堆栈之后，就调用 main函数去到 C 的世界。
+;IF,ELSE,ENDIF：汇编的条件分支语句，跟 C 语言的 if ,else 类似
+;END：文件结束
 ;*******************************************************************************
                  IF      :DEF:__MICROLIB
                 
